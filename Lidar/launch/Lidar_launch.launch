@@ -1,0 +1,45 @@
+<launch>
+
+  <include file="$(find velodyne_pointcloud)/launch/VLP16_points.launch"/>
+
+  <node pkg="rviz" type="rviz" name="rviz" args="-f velodyne"/>  
+
+  <node pkg="Lidar_pkg" type="SDW_Lidar" name="code_executed" output="screen">
+  <!--패키지 명, type => excutable file, cpp파일에 code_executed로 되어있음-->
+    <!--jiwonFilter parameter-->
+    <param name="REMOVE_FACTOR" value="0.2"/>
+
+    <!--ROI parameter-->
+    <param name="ROI_xMin" value="0"/>
+    <param name="ROI_xMax" value="8"/>
+    <param name="ROI_yMin" value="-3"/>
+    <param name="ROI_yMax" value="3"/>
+    <param name="ROI_zMin" value="-1.8"/>
+    <param name="ROI_zMax" value="1"/>
+
+    <!--clustering parameter-->
+    <param name="clustering_offset" value="0.03"/>
+    <param name="MinClusterSize" value="2"/>
+    <param name="MaxClusterSize" value="1000"/>
+
+    <!--ransac parameter-->
+    <param name="ransac_distanceThreshold" value="0.2"/>
+    <param name="Ransac_Z_ROI" value="-0.7"/>
+
+    <!--function on/off-->
+    <param name="preNoiseFiltering" value="true"/>
+    <param name="ROI" value="true"/>
+    <param name="DownSampling" value="true"/>
+    <param name="pre_Clustering" value="true"/>
+    <param name="UpSampling" value="true"/>
+    <param name="RanSaC" value="true"/>
+    <param name="postNoiseFiltering" value="true"/>
+    <param name="post_Clustering" value="true"/>
+
+    <!--Filter on/off-->    
+    <param name="jiwon_filter" value="true"/>
+    <param name="DY_filter" value="true"/>
+  </node>
+
+
+</launch>
