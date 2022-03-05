@@ -1,0 +1,65 @@
+<launch>
+
+  <include file="$(find velodyne_pointcloud)/launch/VLP16_points.launch"/>
+
+  <node pkg="rviz" type="rviz" name="rviz" args="-f velodyne"/>  
+
+  <node pkg="Lidar_process_div" type="Lidar_ROI" name="ROI_node">
+  <!--패키지 명, type => excutable file, cpp파일에 ROI_node로 되어있음-->
+    <!--ROI parameter-->
+    <param name="switch_ROI" value="false"/>
+    <param name="ROI_xMin" value="0"/>
+    <param name="ROI_xMax" value="8"/>
+    <param name="ROI_yMin" value="-4"/>
+    <param name="ROI_yMax" value="4"/>
+    <param name="ROI_zMin" value="-1.8"/>
+    <param name="ROI_zMax" value="1.5"/>
+  </node>
+
+  <node pkg="Lidar_process_div" type="Lidar_preClustering" name="preClustering_node">
+    <!--preClustering parameter-->
+    <param name="switch_preNoiseFiltering" value="false"/>
+    <param name="switch_DownSampling" value="true"/>
+    <param name="switch_pre_Clustering" value="true"/>
+
+    <!--downsampling parameter-->
+    <param name="voxel_size_x" value="0.01"/>
+    <param name="voxel_size_y" value="0.01"/>
+    <param name="voxel_size_z" value="0.01"/>
+
+    <!--clustering parameter-->
+    <param name="EC_eps" value="0.03"/>
+    <param name="EC_MinClusterSize" value="2"/>
+    <param name="EC_MaxClusterSize" value="1000"/>
+  </node>
+
+  <node pkg="Lidar_process_div" type="Lidar_ransac" name="ransac_node">
+    <!--ransac parameter-->
+    <param name="switch_UpSampling" value="false"/>
+    <param name="switch_RanSaC" value="true"/>
+    <param name="ransac_distanceThreshold" value="0.2"/>
+  </node>
+
+  <node pkg="Lidar_process_div" type="Lidar_postClustering" name="postClustering_node" output="screen">
+    <!--preClustering parameter-->
+    <param name="switch_postNoiseFiltering" value="true"/>
+    <param name="switch_DBscan" value="true"/>
+
+    <!--clustering parameter-->
+    <param name="DBscan_eps" value="0.15"/>
+    <param name="DBscan_minPts" value="3"/>
+    <param name="DB_MinClusterSize" value="10"/>
+    <param name="DB_MaxClusterSize" value="10000"/>
+
+    <!--Filter on/off-->    
+    <param name="switch_jiwon_filter" value="true"/>
+    <param name="switch_DY_filter" value="true"/>
+
+    <!--jiwonFilter parameter-->
+    <param name="REMOVE_FACTOR" value="0.2"/>
+
+    <!--DYFilter parameter-->
+    <param name="Ransac_Z_ROI" value="-0.7"/>
+  </node>
+
+</launch>
