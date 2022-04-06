@@ -14,6 +14,6 @@ void Fps::update(){
     m_count++;
         
     cout << "Interval: " << interval << " sec";
-    cout << "\tFPS: " << m_fps << " frame/sec" << endl;
-    cout << "Loop " << m_count << endl;
+    cout << "\tFPS: " << m_fps << " frame/sec";
+    cout << "\tLoop " << m_count << endl;
 }

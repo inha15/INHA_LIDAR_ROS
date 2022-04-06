@@ -1,22 +1,24 @@
 #include <Lidar_process_div/Lidar_declare.h>
 
 
-
 using namespace std;
 
 void ROI(const sensor_msgs::PointCloud2ConstPtr& scan){
     PCXYZI rawData;
     pcl::fromROSMsg(*scan,rawData);
-    if(!switch_ROI){ goto jmp; } //ROI on/off
-    for(unsigned int j = 0; j<rawData.points.size(); j++){     //actual ROI setting
-        float *x = &rawData.points[j].x, *y = &rawData.points[j].y, *z = &rawData.points[j].z;
-        if(*x > ROI_xMin && *x < ROI_xMax && *y > ROI_yMin && *y < ROI_yMax && *z > ROI_zMin && *z < ROI_zMax) continue;
-        *x = *y = *z = 0;
-    }
-jmp:
+    if(switch_ROI) makeCropBox(rawData, ROI_xMin, ROI_xMax, ROI_yMin, ROI_yMax, ROI_zMin, ROI_zMax);
     sensor_msgs::PointCloud2 output;                        //to output ROIdata formed PC2
     pub_process(rawData,output);
     pub_ROI.publish(output);
+}
+
+void makeCropBox (PCXYZI& Cloud, float xMin, float xMax, float yMin, float yMax, float zMin, float zMax){
+    pcl::CropBox<PXYZI> boxfilter;
+    boxfilter.setMin(Eigen::Vector4f(xMin, yMin, zMin, NULL));
+    boxfilter.setMax(Eigen::Vector4f(xMax, yMax, zMax, NULL));
+    boxfilter.setInputCloud(Cloud.makeShared());
+    boxfilter.filter(Cloud);
+
 }
 
 void UpSampling(PCXYZI& TotalCloud, PCXYZI::Ptr upsampledCloud){
@@ -27,11 +29,15 @@ void UpSampling(PCXYZI& TotalCloud, PCXYZI::Ptr upsampledCloud){
     copyPointCloud(TotalCloud, Data_for_voxel);
     filter.setInputCloud(Data_for_voxel.makeShared());
     filter.setSearchMethod(kdtree);
+    //filter.setComputeNormals (true);
     filter.setSearchRadius(0.03);       // Use all neighbors in a radius of 3cm.
     filter.setUpsamplingMethod(pcl::MovingLeastSquares<PXYZI, PXYZI>::SAMPLE_LOCAL_PLANE);
     filter.setUpsamplingRadius(0.025);   // Radius around each point, where the local plane will be sampled.
     filter.setUpsamplingStepSize(0.02); // Sampling step size. Bigger values will yield less (if any) new points.
     filter.process(*upsampledCloud);
+
+    //normalEstimation(upsampledCloud);
+
     //cout << "PointCloud after upsampling has: " << upsampledCloud->points.size ()  << " data points." << endl; 
     
     //sensor_msgs::PointCloud2 output; 		          
@@ -89,7 +95,7 @@ void EuclideanClustering(PCXYZI::Ptr inputCloud, PCXYZI& retCloud){
         pair<float,float> z(9999,-9999); 
     	for (std::vector<int>::const_iterator pit = it->indices.begin(); pit != it->indices.end(); ++pit){
             PXYZI pt = inputCloud->points[*pit];
-            pt.intensity = j % 16;
+            pt.intensity = j % 10;
             retCloud.push_back(pt);
             if(pt.x < x.first)      x.first = pt.x;
             if(pt.x > x.second)     x.second = pt.x;
@@ -108,18 +114,19 @@ void EuclideanClustering(PCXYZI::Ptr inputCloud, PCXYZI& retCloud){
     pub_Clu1.publish(output); 
 }
 
-void DBScanClustering(PCXYZI::Ptr inputCloud, PCXYZI& retCloud){
+void DBScanClustering(PCXYZI::Ptr input_cloud, PCXYZI& retCloud){
     pcl::search::KdTree<PXYZI>::Ptr tree (new pcl::search::KdTree<PXYZI>);  // Creating the KdTree for searching PC
-    tree->setInputCloud(inputCloud);                     // setting the KdTree
-
+    tree->setInputCloud(input_cloud);                     // setting the KdTree
+    PCXYZI::Ptr new_point(new PCXYZI);
     vector<pcl::PointIndices> cluster_indices;           // saving place for clustering obj
-    DBSCANKdtreeCluster<PXYZI> DB;                       // clustering with DBScan method
+    
+    DBSCANSMP<PXYZI> DB;
     DB.setCorePointMinPts(DBscan_minPts);                // minimum points of cluster judge
     DB.setClusterTolerance(DBscan_eps);                  // dist between points
     DB.setMinClusterSize(DB_MinClusterSize);		     // minSize the number of point for clustering
     DB.setMaxClusterSize(DB_MaxClusterSize);	         // maxSize the number of point for clustering
     DB.setSearchMethod(tree);				             // searching method : tree
-    DB.setInputCloud(inputCloud);   	                 // setting ec with inputCloud
+    DB.setInputCloud(input_cloud);   	                 // setting ec with inputCloud
     DB.extract(cluster_indices);                         // save clusteringObj to cluster_indices
 
     cout << "Number of clusters is equal to " << cluster_indices.size () << endl;    //return num of clusteringObj
@@ -132,8 +139,8 @@ void DBScanClustering(PCXYZI::Ptr inputCloud, PCXYZI& retCloud){
         pair<float,float> y(9999,-9999); 
         pair<float,float> z(9999,-9999); 
     	for (std::vector<int>::const_iterator pit = it->indices.begin(); pit != it->indices.end(); ++pit){
-            PXYZI pt = inputCloud->points[*pit];
-            pt.intensity = j % 16;
+            PXYZI pt = input_cloud->points[*pit];
+            //pt.intensity = j % 10;
             retCloud.push_back(pt);
             if(pt.x < x.first)      x.first = pt.x;
             if(pt.x > x.second)     x.second = pt.x;
@@ -155,33 +162,81 @@ void DBScanClustering(PCXYZI::Ptr inputCloud, PCXYZI& retCloud){
     print_OBJ(sorted_OBJ);
     msg_process(sorted_OBJ);
     pub_DBscan.publish(output);
+
+    // pcl::PointCloud<pcl::PointXYZ>::Ptr showcloud(new pcl::PointCloud<pcl::PointXYZ>);
+    // pcl::copyPointCloud(retCloud, *showcloud);
+    // pcl::visualization::PCLVisualizer viewer("cloud viewer");
+    // viewer.addPointCloud<PXYZ>(showcloud);
+
+    // while (!viewer.wasStopped ())
+    // {
+    //     viewer.spinOnce(100);
+    // }
+
 }
 
-void RanSaC(PCXYZI::Ptr upsampledCloud){
+void RanSaC(PCXYZI::Ptr inputCloud){
     pcl::ModelCoefficients coefficients;
     pcl::PointIndices::Ptr inliers (new pcl::PointIndices ());
-    PCXYZI inlierPoints;
-    PCXYZI inlierPoints_neg;
+    PCXYZI::Ptr inlierPoints (new PCXYZI ());
+    PCXYZI::Ptr inlierPoints_neg (new PCXYZI ());
     pcl::SACSegmentation<PXYZI> seg;
     pcl::ExtractIndices<PXYZI> extract;
+
+    PCXYZI::Ptr lowPoints (new PCXYZI ());
+    PCXYZI::Ptr highPoints (new PCXYZI ());
+    pcl::PassThrough<PXYZI> filter;
+    filter.setInputCloud (inputCloud);
+    filter.setFilterFieldName ("z");
+    filter.setFilterLimits (-10, 0);
+    filter.filter (*lowPoints);
+    filter.setFilterLimits (0, 10);
+    filter.filter (*highPoints);
 
     seg.setOptimizeCoefficients (true);
     seg.setModelType (pcl::SACMODEL_PLANE);
     seg.setMethodType (pcl::SAC_RANSAC);  
-    seg.setDistanceThreshold (ransac_distanceThreshold);             
-    seg.setInputCloud(upsampledCloud); 
+    seg.setDistanceThreshold (ransac_distanceThreshold);
+    seg.setMaxIterations (1000);               //최대 실행 수
+    seg.setInputCloud(lowPoints); 
     seg.segment (*inliers, coefficients);
 
-    pcl::copyPointCloud<PXYZI>(*upsampledCloud, *inliers, inlierPoints);    
-    extract.setInputCloud (upsampledCloud);
+    pcl::copyPointCloud<PXYZI>(*lowPoints, *inliers, *inlierPoints);
+    extract.setInputCloud (lowPoints);
     extract.setIndices (inliers);
-    extract.setNegative (true);//false
-    extract.filter (inlierPoints_neg);
+    extract.setNegative (true);     //false
+    extract.filter (*inlierPoints_neg);    
 
-    pcl::copyPointCloud(inlierPoints_neg, *upsampledCloud);
+    //pcl::concatenateFields(*lowPoints, *highPoints, *inlierPoints_neg); //분할 한 두 포인트 병합
+    *inlierPoints_neg += *highPoints;
+
+    //pcl::copyPointCloud(inlierPoints_neg, *inputCloud);
     sensor_msgs::PointCloud2 output; 
-    pub_process(inlierPoints_neg, output); 
+    pub_process(*inlierPoints_neg, output); 
     pub_RS.publish(output); 
-    pub_process(inlierPoints, output); 
+    pub_process(*inlierPoints, output); 
     pub_GND.publish(output); 
+}
+
+void normalEstimation (PCXYZI::Ptr cloud)
+{  
+    // estimate normals
+    pcl::PointCloud<pcl::Normal>::Ptr normals (new pcl::PointCloud<pcl::Normal>);
+
+    pcl::IntegralImageNormalEstimation<pcl::PointXYZI, pcl::Normal> ne;
+    ne.setNormalEstimationMethod (ne.AVERAGE_3D_GRADIENT);
+    ne.setMaxDepthChangeFactor(0.02f);
+    ne.setNormalSmoothingSize(10.0f);
+    ne.setInputCloud(cloud);
+    ne.compute(*normals);
+
+    // visualize normals
+    pcl::visualization::PCLVisualizer viewer("PCL Viewer");
+    viewer.setBackgroundColor (0.0, 0.0, 0.5);
+    viewer.addPointCloudNormals<pcl::PointXYZI,pcl::Normal>(cloud, normals);
+    
+    while (!viewer.wasStopped ())
+    {
+      viewer.spinOnce ();
+    }
 }

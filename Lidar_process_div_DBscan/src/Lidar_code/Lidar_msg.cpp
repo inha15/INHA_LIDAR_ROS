@@ -71,6 +71,6 @@ void msg_process(vector<pair<PXYZI,string>>& sorted_OBJ){
         Lidar_string.data = Lidar_string.data + send_msg_DXY(sorted_OBJ[i].first) + sorted_OBJ[i].second;
         //Lidar_string.data +="/";
     }
-    cout << Lidar_string.data << endl;
+    //cout << Lidar_string.data << endl;
     pub_msg.publish(Lidar_string);
 }

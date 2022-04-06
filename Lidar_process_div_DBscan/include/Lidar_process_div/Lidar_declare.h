@@ -19,6 +19,9 @@
 #include <pcl/common/transforms.h>
 #include <pcl/console/parse.h>
 #include <pcl/console/time.h>
+#include <pcl/features/integral_image_normal.h>
+#include <pcl/filters/crop_box.h>
+#include <pcl/filters/passthrough.h>
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/filters/passthrough.h>
 #include <pcl/filters/extract_indices.h>
@@ -35,7 +38,10 @@
 #include <pcl/kdtree/kdtree.h>
 #include <pcl/surface/mls.h>
 #include <pcl/surface/impl/mls.hpp>
-#include <Lidar_process_div/DBSCAN_kdtree.h>
+#include <pcl/visualization/cloud_viewer.h>
+#include <pcl/visualization/pcl_visualizer.h>
+#include <Lidar_process_div/DBSCAN_smpg.h>
+//#include <Lidar_process_div/DBSCAN_hanbin.h>
 //#include "Lidar_pkg/Lidar_msg.h"  //include "패키지 명/메시지 파일 명.h"
 
 using namespace std;
@@ -76,12 +82,14 @@ bool switch_DBscan;
 
 //func
 void ROI(const sensor_msgs::PointCloud2ConstPtr&);
+void makeCropBox (PCXYZI& Cloud, float xMin, float xMax, float yMin, float yMax, float zMin, float zMax);
 void UpSampling(PCXYZI&, PCXYZI::Ptr);
 void DownSampling(PCXYZI&, PCXYZI::Ptr);
 void NoiseFiltering(PCXYZI::Ptr, PCXYZI::Ptr, string);
 void DBScanClustering(PCXYZI::Ptr, PCXYZI&);
 void EuclideanClustering(PCXYZI::Ptr, PCXYZI&);
 void RanSaC(PCXYZI::Ptr);
+void normalEstimation (PCXYZI::Ptr cloud);
 string send_msg_DXY(PXYZI);
 string send_msg_minmax(float, float, float, float);
 string send_msg_cnt(int);

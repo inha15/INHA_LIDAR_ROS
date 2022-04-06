@@ -32,7 +32,7 @@ target_link_libraries(msg_div ${catkin_LIBRARIES})
 #add_dependencies(msg_div ${catkin_EXPORTED_TARGETS} ${${PROJECT_NAME}_EXPORTED_TARGETS})
 
 add_library(Lidar_code src/Lidar_code/Lidar_code.cpp)
-target_link_libraries(Lidar_code ${catkin_LIBRARIES} filter_div etc_div msg_div)
+target_link_libraries(Lidar_code ${catkin_LIBRARIES} pcl_visualization filter_div etc_div msg_div)
 #add_dependencies(Lidar_code ${catkin_EXPORTED_TARGETS} ${${PROJECT_NAME}_EXPORTED_TARGETS})
 
 #add_library(decalre_div src/extra_code/Lidar_declare.h)
@@ -54,6 +54,9 @@ target_link_libraries(Lidar_ransac Lidar_code)
 
 add_executable(Lidar_postClustering src/node_code/Lidar_postClustering.cpp)
 target_link_libraries(Lidar_postClustering Lidar_code)
+
+add_executable(Lidar_visual src/node_code/Lidar_visual.cpp)
+target_link_libraries(Lidar_visual Lidar_code)
 
 
 
