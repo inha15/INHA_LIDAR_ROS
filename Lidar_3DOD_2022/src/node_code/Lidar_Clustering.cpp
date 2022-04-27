@@ -47,9 +47,9 @@ int main(int argc, char** argv){
     nh.getParam("/Clustering_node/REMOVE_FACTOR", REMOVE_FACTOR);
 
 	ros::Subscriber sub = nh.subscribe<sensor_msgs::PointCloud2> ("/2_1_velodyne_points_ransac", 100, Clustering_process);
-    if( switch_Euclid && !switch_DBscan ) pub_Euclid = nh.advertise<sensor_msgs::PointCloud2> ("/3_velodyne_points_Euclid", 1);
-    else if( switch_DBscan ) pub_DBscan = nh.advertise<sensor_msgs::PointCloud2> ("/3_velodyne_points_DBSCAN", 1);
-    pub_msg = nh.advertise<std_msgs::String> ("/Lidar_msg",1); 
+    if( switch_Euclid && !switch_DBscan ) pub_Euclid = nh.advertise<sensor_msgs::PointCloud2> ("/3_velodyne_points_Clustering", 10);
+    else if( switch_DBscan ) pub_DBscan = nh.advertise<sensor_msgs::PointCloud2> ("/3_velodyne_points_Clustering", 10);
+    pub_msg = nh.advertise<std_msgs::String> ("/Lidar_msg",10); 
 
     //OUT_MSG = nh.advertise<Lidar_pkg::Lidar_msg> ("/lidar_detected_object", 1);
     //<패키지 명/메시지 파일 명>
